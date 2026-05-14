@@ -32,6 +32,42 @@ Two product goals:
 
 **The key design discipline:** Every Quill concept gets re-exported through Quolt with better names and docs. Framework wrappers stay **thin** — they just expose the core `QuoltEditor` class idiomatically (Vue composables, React hooks, etc.). When future React/Svelte wrappers ship, they reuse the same core untouched.
 
+### Document model — Parchment-native blots
+
+**Decision: Quolt's built-in formats are implemented via the same `defineMark` / `defineBlock` / `defineEmbed` factories that users use.** No two-track system where built-ins live in Quill and extensions live in Quolt.
+
+**Why this matters:**
+
+- **Consistency.** One pattern, one mental model, one set of class names for the themes package to target.
+- **Theming.** Every format flows through Quolt's class naming (`quolt-bold`, `quolt-h1`, etc.). Themes select on those — no fighting Quill's class conventions.
+- **Types.** Our factories produce typed blots end-to-end.
+- **Hooks.** Built-ins can carry Quolt-specific metadata (slash labels, chrome hints) on the same field as user formats.
+
+**How:** Quolt registers its built-in blots over Quill's defaults via `Quill.register(path, blot, true)`. Quill's tree algorithm picks up our blot instead. The Scroll, edit logic, keyboard module, and clipboard module stay Quill's — we're replacing the *document-model leaf classes*, not the engine.
+
+**What ships built-in (target):**
+
+| Kind | Names |
+| --- | --- |
+| Marks | bold, italic, underline, strike, link, color, background |
+| Blocks | header(1–6), blockquote, code-block |
+| Embeds | image, divider |
+
+Lists (`bullet`, `ordered`, indent levels) intentionally keep Quill's implementation in the first pass — they're the most fiddly built-ins, and Quill's version is battle-tested. Revisit only if we hit a real limitation.
+
+**What stays Quill's:**
+
+- `Scroll` (the root container blot)
+- `Block` (the base block blot — our blocks extend this)
+- Keyboard, clipboard, history modules
+- The edit-loop / Delta plumbing
+
+**Registration order on construction:**
+
+1. Quolt's built-ins (idempotent — flag-guarded across editor instances).
+2. Per-editor `options.formats` (can override built-ins).
+3. Globally registered formats via `registerGlobalFormat(...)`.
+
 ### Layer 2 API surface (current — shipped)
 
 ```ts
@@ -52,13 +88,50 @@ class QuoltEditor {
 }
 ```
 
-### Custom format primitives (current — defineEmbed shipped, others stubbed)
+### Custom format primitives
+
+The same primitives back both built-ins and user extensions. See "Document model — Parchment-native blots" above.
 
 ```ts
 defineEmbed<V>({ name, inline, toDOM?, render?, parse? })
-defineMark<V>({ name, tag, class?, style? })          // stub
+defineMark<V>({ name, tag, attrs?, class?, style?, parse? })
 defineBlock<V>({ name, tag, render?, slash?, transformFromText? })  // stub
 ```
+
+### Keyboard shortcuts — typed, declarative
+
+Quill's keyboard API is loose strings and inconsistent modifier names. Quolt ships a typed declarative replacement.
+
+```ts
+new QuoltEditor(el, {
+  shortcuts: {
+    'mod+b':       (editor) => editor.format.bold(),
+    'mod+i':       (editor) => editor.format.italic(),
+    'mod+u':       (editor) => editor.format.underline(),
+    'mod+shift+s': (editor) => editor.format.toggle('strike'),
+    'mod+k':       (editor, event) => openLinkDialog(),
+  },
+});
+```
+
+- **`mod`** = Cmd on Mac, Ctrl elsewhere (standard cross-platform convention from ProseMirror/CodeMirror/Slate).
+- Modifiers compose with `+`: `mod+shift+h`, `alt+enter`, etc.
+- Handler signature: `(editor: QuoltEditor, event: KeyboardEvent) => void | boolean`. Returning `false` lets the default keystroke through; anything else consumes it.
+
+**Runtime API:**
+
+```ts
+editor.shortcuts.bind('mod+e', handler);
+editor.shortcuts.unbind('mod+e');
+editor.shortcuts.list();              // [{ combo, displayName, handler }]
+editor.shortcuts.display('mod+b');    // "⌘B" on Mac, "Ctrl+B" elsewhere
+```
+
+**Type safety** via template literal types — `'mod+b'` is valid, `'foo+bar'` is a type error at compile time.
+
+**Defaults** ship out of the box (`mod+b/i/u`, `mod+k`, `mod+shift+h`, etc.). Users override or remove any. The full list is enumerable via `editor.shortcuts.list()` to power a "keyboard shortcuts" help modal.
+
+Status: not yet implemented. Independent of themes and the blot refactor — slots in anytime.
 
 ### Vue layer pattern (target + current)
 
@@ -95,10 +168,10 @@ function onReady(e: QuoltEditor) { editorRef.value = e; }
 ```
 quolt/
 ├── packages/
-│   ├── core/          # framework-agnostic: QuoltEditor class, format primitives, types
+│   ├── core/          # framework-agnostic: QuoltEditor class, primitives, built-in blots, shortcuts
+│   ├── themes/        # CSS-only — design tokens, default light + dark stylesheets, icons
 │   ├── vue/           # Vue 3 wrapper (defineComponentEmbed, useQuolt, QuoltEditor.vue)
-│   ├── react/         # future — see "React adapter plan" below
-│   └── themes/        # future — CSS/design tokens
+│   └── react/         # future — see "React adapter plan" below
 ├── apps/
 │   ├── docs/          # VitePress site
 │   └── playground/    # Vite + Vue sandbox
@@ -107,6 +180,8 @@ quolt/
 ├── package.json
 └── LICENSE
 ```
+
+**Why themes is its own package:** Pure CSS, no framework dependency. Versioned independently of the engine. Users can install just the theme they want, or none at all. Framework component shells (`<QuoltToolbar>`, slash menu, etc.) live in their framework packages but consume tokens from `packages/themes` via class names — coupling is by selector contract.
 
 ## Tooling
 
@@ -117,6 +192,18 @@ quolt/
 - **Docs:** VitePress
 - **Versioning/publish:** Changesets (not yet set up)
 - **License:** MIT
+
+## Design workflow — using Claude
+
+Component designs (toolbar, slash menu, modals, focus states) are designed in collaboration with Claude. Three workflows of decreasing fidelity / increasing speed:
+
+1. **HTML mockups in the repo (default).** Claude produces self-contained HTML+CSS files under `apps/playground/designs/` — one per component variant. Open in browser, iterate by editing CSS. Mockups are versioned alongside code; the path from mockup to component is direct (lift CSS into `packages/themes`, wire the component shell in the framework package).
+
+2. **Figma via the Figma MCP** (for shareable artifacts). Claude Code has a Figma MCP available — either Claude creates a Figma file seeded with frames per component (`create_new_file`) or you sketch in Figma and share the URL. Claude reads design context via `get_design_context` / `get_screenshot` and translates to CSS. Best when the design needs to be shared with non-engineers or polished visually.
+
+3. **Claude.ai web app with Artifacts** (highest design capacity). Iterate on designs in a Claude.ai conversation (separate from Claude Code). Export by copy-paste of generated HTML/CSS or screenshots. Slowest hand-off but highest design exploration capacity.
+
+**Default to (1).** Escalate to (2) when you have a design that needs polishing or sharing. (3) is for exploratory sessions where you want maximum design space.
 
 ## Namespace
 
@@ -210,7 +297,7 @@ These ship **on demand**, not speculatively. Themes and the core API come first;
 
 ## Themes — light, dark, customizable
 
-Replacing Quill's dated "Snow" look is one of Quolt's biggest visual wins. Themes are a first-class part of the project, not an afterthought.
+Replacing Quill's dated "Snow" look is one of Quolt's biggest visual wins. Themes are a first-class part of the project, not an afterthought. They ship as a separate package (`packages/themes`) so they're pure CSS, framework-independent, and versioned on their own cadence.
 
 ### Default behavior
 
@@ -392,35 +479,45 @@ After `quolt-vue` ships v0.1 and the API has settled — currently estimated as 
 - **Layer 2 API skeleton** — `QuoltEditor` class with `format`, `insert`, `content`, `selection` groups
 - **`on/off` event mapping** — `change` ↔ `text-change`, `selection` ↔ `selection-change`
 - **`defineEmbed` primitive** — declarative (`toDOM`) and renderer-based (`render`) paths
-- **Vue adapter** — `<QuoltEditor>` with v-model, `useQuolt()` composable, `defineComponentEmbed`
+- **Delta as canonical content form** — `v-model` binds Delta, `v-model:html` opt-in for HTML
+- **Vue adapter** — `<QuoltEditor>`, `useQuolt()` composable, `defineComponentEmbed`
 - **Playground** — `apps/playground` (Vite + Vue) with mention chip + divider demos
 - **Vitest** — root config + happy-dom + core smoke tests
 - **VitePress docs** — `apps/docs` skeleton with getting-started, custom-formats, component-embeds, API reference
 
 ### In progress / next up
 
-**Themes (priority #1 — visual differentiation)**
-- Default light + dark CSS shipped from `packages/core/theme/`
-- CSS custom property token taxonomy
+**Built-in Parchment-native blots (priority #1 — defines class names everything else depends on)**
+- `defineMark` factory implementation (Inline blot generator — boolean / attribute / style variants)
+- Built-in marks: bold, italic, underline, strike, link, color, background
+- `defineBlock` factory implementation (BlockBlot generator)
+- Built-in blocks: header(1–6), blockquote, code-block
+- Built-in embeds: image (divider already shipped)
+
+**`packages/themes` (priority #2 — needs Parchment-native class names from step #1)**
+- Token taxonomy (CSS custom properties)
+- Default light + dark stylesheets
+- Icon set
 - `theme` prop on `<QuoltEditor>` (`auto` | `light` | `dark` | `none`)
-- `useQuoltTheme()` composable
+- `useQuoltTheme()` composable in `quolt-vue`
 - Playground theme switcher
 
-**Custom marks and blocks (signatures stubbed, implementation pending)**
-- `defineMark` wrapper-class generation (Inline + Attributor pipeline)
-- `defineBlock` wrapper-class generation (BlockBlot pipeline)
-- Built-in marks: highlight, color, font-size, font-family
-- Built-in blocks: callout, code-block-with-language *(toggle blocks intentionally dropped — see "Optional block-level UX modules" above)*
+**Typed keyboard shortcuts (independent — slots in anywhere)**
+- Shortcut parser + template-literal type
+- `shortcuts` option on QuoltEditor
+- Runtime `bind` / `unbind` / `list` / `display`
+- Default bindings (`mod+b`, `mod+i`, `mod+k`, etc.)
+
+**Toolbar component (Vue first)**
+- `<QuoltToolbar>` SFC with presets (`minimal`, `full`, custom array)
+- Designs sketched as HTML mockups in `apps/playground/designs/` first
+- Uses tokens from `packages/themes`
 
 **Optional block UX modules (on-demand, not speculative)**
 - `transforms` — markdown shortcuts (smallest, highest value)
 - `slashMenu` — only if users ask
 - `blockChrome` — only if users ask
 - `reorder` — only if users ask
-
-**Toolbar**
-- Toolbar preset registry — `toolbar="minimal" | "full" | string[]`
-- Component-based toolbar (Vue first)
 
 **Tests**
 - Vue component tests (mount, v-model echo, embed mount/unmount)
@@ -431,7 +528,7 @@ After `quolt-vue` ships v0.1 and the API has settled — currently estimated as 
 - Changesets for versioning + publishing
 
 **Publishing & ops**
-- First commit + push to GitHub
+- Push to GitHub
 - Claim the `@quolt` npm scope (publish first package)
 - Initial `0.0.1` release
 
@@ -440,15 +537,18 @@ After `quolt-vue` ships v0.1 and the API has settled — currently estimated as 
 
 ## Roadmap (suggested order)
 
-1. **Verify the current build** — `pnpm typecheck`, `pnpm test`, and `pnpm play` should all work end to end. Playground is the visual gate.
-2. **Theme system (light + dark)** — default CSS, token taxonomy, `theme` prop, `useQuoltTheme()`. Biggest visual win for the effort, and the thing that most clearly differentiates Quolt from raw Quill.
-3. **`defineMark` and `defineBlock` wrapper-class generation** — finish the primitives the signatures already promise.
-4. **Toolbar presets + `toolbar` prop** — `"minimal"`, `"full"`, custom array.
-5. **Vue component tests + Vitest UI mode.**
-6. **First publish** — `quolt-core` + `quolt-vue` at `0.0.1`. Claim the `@quolt` scope on npm.
-7. **Optional block-UX modules** — only if real users request them. Default order: `transforms` → `slashMenu` → `blockChrome` → `reorder`.
-8. **React package** — once the Vue version is stable and the core API has settled.
-9. **Svelte package** — same trigger.
+1. **Verify the current build** ✅ — `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm play` all green.
+2. **Built-in marks via `defineMark`** — bold, italic, underline, strike, link, color, background. Registered over Quill's defaults. Establishes the `quolt-*` class-name contract that themes target.
+3. **Built-in blocks via `defineBlock`** — header(1–6), blockquote, code-block. Lists keep Quill's implementation for now.
+4. **Built-in embeds** — image (using existing `defineEmbed`). Divider already shipped.
+5. **`packages/themes`** — token taxonomy, default light + dark CSS, icons. Targets the class names from steps 2–4.
+6. **Typed keyboard shortcuts** — declarative `shortcuts` option, runtime API, default bindings. Independent of theme work; slot in opportunistically.
+7. **Toolbar component (Vue)** — designed as HTML mockups first, lifted into `<QuoltToolbar>` SFC.
+8. **Vue component tests + Vitest UI mode.**
+9. **First publish** — `quolt-core`, `quolt-themes`, `quolt-vue` at `0.0.1`. Claim the `@quolt` scope on npm.
+10. **Optional block-UX modules** — only if real users request them. Default order: `transforms` → `slashMenu` → `blockChrome` → `reorder`.
+11. **React package** — once the Vue version is stable and the core API has settled.
+12. **Svelte package** — same trigger.
 
 ## Future considerations (not blockers)
 

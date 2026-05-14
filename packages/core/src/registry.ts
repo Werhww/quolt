@@ -143,18 +143,32 @@ export function defineEmbed<V>(config: DefineEmbedConfig<V>): QuoltFormatDefinit
 }
 
 /**
- * Inline formatting mark — bold/italic-style. STUB: the wrapper class generation
- * is pending; the shape is locked in so consumers can author against it today.
- * Tracked in PLAN.md → "Custom marks".
+ * Inline formatting mark — bold/italic-style.
+ *
+ * Three behaviors composed in one signature:
+ *   - Boolean marks (V = true): just wrap selection in `tag`.
+ *   - Attribute marks: `attrs(value)` returns key/value pairs applied to the tag (e.g., link href).
+ *   - Style marks: `style(value)` returns CSS properties applied to the tag (e.g., color).
+ *
+ * `parse(node)` extracts the value from the DOM during paste / setHTML; defaults
+ * to `true` for boolean marks. Provide it for any non-boolean V.
  */
 export interface DefineMarkConfig<V> {
   name: string;
-  /** Tag wrapped around the marked range. Defaults to 'span'. */
-  tag?: string;
-  /** Optional class applied to the wrapping tag. May be a function of the value. */
+  /**
+   * Tag wrapped around the marked range. Defaults to 'span'. Pass an array to
+   * accept multiple tags during HTML parsing (e.g., ['strong', 'b'] for bold).
+   * The first entry is used when creating new blots programmatically.
+   */
+  tag?: string | string[];
+  /** Attributes computed from the value (e.g., link → href). */
+  attrs?: (value: V) => Record<string, string>;
+  /** Class applied to the wrapping tag. May be a function of the value. */
   class?: string | ((value: V) => string);
-  /** Optional inline style derived from the value (e.g., highlight color). */
+  /** Inline style derived from the value (e.g., highlight color). */
   style?: (value: V) => Partial<CSSStyleDeclaration>;
+  /** DOM → value. Required for non-boolean marks. */
+  parse?: (node: HTMLElement) => V;
 }
 
 export function defineMark<V>(config: DefineMarkConfig<V>): QuoltFormatDefinition {
@@ -162,11 +176,74 @@ export function defineMark<V>(config: DefineMarkConfig<V>): QuoltFormatDefinitio
     __quolt: 'format-definition',
     name: config.name,
     kind: 'mark',
-    register() {
-      // TODO: build Inline + ClassAttributor / StyleAttributor depending on config shape.
-      void config;
+    register(QuillCtor) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Inline = QuillCtor.import('blots/inline') as any;
+      const blotName = config.name;
+      const tagName: string | string[] = Array.isArray(config.tag)
+        ? config.tag.map((t) => t.toUpperCase())
+        : (config.tag ?? 'span').toUpperCase();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      class QuoltMarkBlot extends (Inline as any) {
+        static blotName = blotName;
+        static tagName = tagName;
+
+        static create(value: V): HTMLElement {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const node = (super.create as (v: unknown) => HTMLElement).call(this, value);
+          applyMarkConfig(node, value, config);
+          return node;
+        }
+
+        static formats(node: HTMLElement): V | true {
+          if (config.parse) return config.parse(node);
+          return true;
+        }
+
+        // Re-apply config when the format is set on an existing blot (e.g., changing
+        // a link's URL). For boolean marks this is a no-op.
+        format(name: string, value: unknown): void {
+          if (name === blotName && value !== false && value != null) {
+            applyMarkConfig(this.domNode as HTMLElement, value as V, config);
+          } else {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (Inline.prototype.format as (n: string, v: unknown) => void).call(this, name, value);
+          }
+        }
+      }
+
+      QuillCtor.register(`formats/${blotName}`, QuoltMarkBlot as never, true);
     },
   };
+}
+
+function applyMarkConfig<V>(
+  node: HTMLElement,
+  value: V,
+  config: DefineMarkConfig<V>,
+): void {
+  if (config.attrs) {
+    const attrs = config.attrs(value);
+    for (const [k, v] of Object.entries(attrs)) {
+      node.setAttribute(k, v);
+    }
+  }
+  if (config.class) {
+    const cls = typeof config.class === 'function' ? config.class(value) : config.class;
+    if (cls) node.classList.add(...cls.split(/\s+/).filter(Boolean));
+  }
+  if (config.style) {
+    const style = config.style(value);
+    for (const [k, v] of Object.entries(style)) {
+      if (v !== undefined && v !== null) {
+        // CSSStyleDeclaration indexer accepts kebab via setProperty; for camelCase
+        // we go through the property assignment path.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (node.style as any)[k] = v;
+      }
+    }
+  }
 }
 
 /**

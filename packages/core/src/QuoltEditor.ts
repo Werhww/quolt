@@ -5,6 +5,7 @@ import { createContentApi, type ContentApi } from './api/content.js';
 import { createFormatApi, type FormatApi } from './api/format.js';
 import { createInsertApi, type InsertApi } from './api/insert.js';
 import { createSelectionApi, type SelectionApi } from './api/selection.js';
+import { registerBuiltinFormats } from './builtin/index.js';
 import {
   registerEditor,
   unregisterEditor,
@@ -36,7 +37,13 @@ export class QuoltEditor {
   constructor(element: HTMLElement, options: QuoltOptions = {}) {
     this._container = element;
 
-    // Register per-editor formats BEFORE construction — Quill snapshots its
+    // Register Quolt's built-in formats FIRST (idempotent across editor instances).
+    // Built-ins are Parchment-native blots generated via defineMark/defineBlock/defineEmbed,
+    // registered over Quill's defaults — Quill's tree algorithm sees Quolt's blots instead.
+    registerBuiltinFormats();
+
+    // Then per-editor user formats — these can override built-ins by reusing names.
+    // Registration must happen BEFORE Quill construction; Quill snapshots its
     // registry at instance time, so late registration would silently no-op.
     for (const def of options.formats ?? []) {
       assertFormatDefinition(def);
