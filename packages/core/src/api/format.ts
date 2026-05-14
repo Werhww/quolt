@@ -1,5 +1,7 @@
 import type Quill from 'quill';
 
+import type { HeaderLevel } from '../builtin/blocks/header.js';
+
 export interface FormatApi {
   /** Toggle bold on the current selection. */
   bold(): void;
@@ -9,6 +11,12 @@ export interface FormatApi {
   underline(): void;
   /** Toggle strike on the current selection. */
   strike(): void;
+  /** Apply a heading level (1–6) to the current line. Re-applying the same level clears it. */
+  heading(level: HeaderLevel): void;
+  /** Toggle blockquote on the current line. */
+  blockquote(): void;
+  /** Toggle code-block on the current line. */
+  codeBlock(): void;
   /** Toggle any boolean-valued format by name. */
   toggle(name: string): void;
   /** Set a format to a specific value on the current selection. */
@@ -33,6 +41,14 @@ export function createFormatApi(quill: Quill): FormatApi {
     italic: () => toggle('italic'),
     underline: () => toggle('underline'),
     strike: () => toggle('strike'),
+    heading(level) {
+      const current = (quill.getFormat() as Record<string, unknown>)['header'];
+      // Re-applying the same level is a clear, matching how other rich-text
+      // editors treat heading buttons (and how toggle() works for marks).
+      quill.format('header', current === level ? false : level, 'user');
+    },
+    blockquote: () => toggle('blockquote'),
+    codeBlock: () => toggle('code-block'),
     toggle,
     set(name, value) {
       quill.format(name, value, 'user');

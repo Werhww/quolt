@@ -18,6 +18,16 @@ Each design lives in its own folder: `inbox/<component-name>-v<n>/` (e.g. `inbox
    - Open a GitHub issue: *"@claude implement `design/inbox/<name>` — open a PR against main"*.
 4. Once the PR lands, move the folder to `design/shipped/<name>/`.
 
+## Decoding a Claude Design bundle
+
+Claude Design exports a single self-extracting `.html` file with the assets gzip+base64-encoded inside. To inspect the raw markup, CSS tokens, or asset list, run the local decoder:
+
+```bash
+node design/scripts/extract-bundle.mjs "design/inbox/<name>/<bundle>.html"
+```
+
+That writes `template.html` and each asset (fonts, images, etc.) to a sibling `_extracted/` folder you can grep through normally. The decoder is only needed for inspection — the `.html` file itself opens fine in a browser.
+
 ## Source of truth
 
 - Visual direction, token taxonomy, component roadmap → `PLAN.md` (`Themes` and `Status` sections)

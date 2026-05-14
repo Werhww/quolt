@@ -247,19 +247,33 @@ function applyMarkConfig<V>(
 }
 
 /**
- * Block-level container — heading, callout, blockquote, toggle, code-block.
- * STUB: full Notion-style chrome (slash menu, drag handles, transforms) lives
- * behind this entry point and is intentionally deferred. The signature is set
- * now so the eventual implementation doesn't require an API rev.
+ * Block-level container — heading, blockquote, code-block, callout.
  *
- * See PLAN.md → "Block model".
+ * Two shapes:
+ *   - Single-tag blocks (V = true): blockquote, code-block. One tag, one class.
+ *   - Variant blocks (V = number): heading. `tag` is an array of tags;
+ *     value is the 1-based index (value 1 → tag[0], value 2 → tag[1], …).
+ *
+ * For variant blocks, the default class adds a `-${value}` suffix
+ * (e.g. `quolt-header quolt-header-1`); pass a custom `class` function
+ * to override (PLAN.md uses `quolt-h1` for headings — see builtin/blocks).
+ *
+ * Slash menu and transformFromText metadata are accepted now but only consumed
+ * once the optional block-UX modules ship (see PLAN.md → "Optional modules").
  */
 export interface DefineBlockConfig<V> {
   name: string;
-  tag?: string;
-  /** Optional renderer for component-backed blocks (callouts, toggle blocks, etc.). */
+  /**
+   * Block tag. Single string for plain blocks ('blockquote', 'pre'); array for
+   * variant blocks where value selects the tag (e.g. ['h1','h2','h3','h4','h5','h6']).
+   * Defaults to 'p'.
+   */
+  tag?: string | string[];
+  /** Class applied to the block element. Function form receives the current value. */
+  class?: string | ((value: V) => string);
+  /** Optional renderer for component-backed blocks. Not yet implemented. */
   render?: FormatRenderer<V>;
-  /** Slash-menu metadata — used by the block-chrome module when it ships. */
+  /** Slash-menu metadata — consumed by the block-chrome module when it ships. */
   slash?: { label: string; icon?: string; aliases?: string[] };
   /** Predicate that turns plain text into this block (e.g., "# foo" → heading). */
   transformFromText?: (text: string) => V | null;
@@ -270,11 +284,109 @@ export function defineBlock<V>(config: DefineBlockConfig<V>): QuoltFormatDefinit
     __quolt: 'format-definition',
     name: config.name,
     kind: 'block',
-    register() {
-      // TODO: build BlockBlot with attached slash/transform metadata.
-      void config;
+    register(QuillCtor) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Block = QuillCtor.import('blots/block') as any;
+      const blotName = config.name;
+      const tagSpec = config.tag ?? 'p';
+      const isVariant = Array.isArray(tagSpec);
+      const tagArray: string[] | null = isVariant
+        ? tagSpec.map((t) => t.toUpperCase())
+        : null;
+      const singleTag: string | null = isVariant
+        ? null
+        : (tagSpec as string).toUpperCase();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      class QuoltBlockBlot extends (Block as any) {
+        static blotName = blotName;
+        static tagName = tagArray ?? singleTag!;
+
+        static create(value: V): HTMLElement {
+          let node: HTMLElement;
+          if (tagArray) {
+            const idx = (typeof value === 'number' ? value : 1) - 1;
+            const tag = tagArray[Math.max(0, Math.min(tagArray.length - 1, idx))]!;
+            node = document.createElement(tag);
+          } else {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            node = (super.create as (v: unknown) => HTMLElement).call(this, value);
+          }
+          applyBlockClass(node, value, config, blotName, tagArray);
+          return node;
+        }
+
+        static formats(node: HTMLElement): V | true {
+          if (tagArray) {
+            const idx = tagArray.indexOf(node.tagName);
+            return (idx + 1) as V;
+          }
+          return true;
+        }
+
+        format(name: string, value: unknown): void {
+          if (name === blotName && tagArray && typeof value === 'number') {
+            // Variant block (e.g. header): the tag itself differs by value
+            // (H1 vs H2 vs H3 …). Element tags are immutable once created, so
+            // Quill's Editor.formatLine path requires us to swap the blot via
+            // replaceWith — which routes through our static create() and
+            // builds a fresh element with the correct tag and class.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (this as any).replaceWith(blotName, value);
+            return;
+          }
+          if (name === blotName && value !== false && value != null) {
+            // Same blot, same shape — idempotent class re-apply for safety.
+            applyBlockClass(
+              this.domNode as HTMLElement,
+              value as V,
+              config,
+              blotName,
+              tagArray,
+            );
+            return;
+          }
+          // Different format name, or clearing (value=false) — defer to
+          // Parchment's default block-format machinery.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (Block.prototype.format as (n: string, v: unknown) => void).call(
+            this,
+            name,
+            value,
+          );
+        }
+      }
+
+      QuillCtor.register(`formats/${blotName}`, QuoltBlockBlot as never, true);
     },
   };
+}
+
+function applyBlockClass<V>(
+  node: HTMLElement,
+  value: V,
+  config: DefineBlockConfig<V>,
+  blotName: string,
+  tagArray: string[] | null,
+): void {
+  // Strip any prior quolt-${blotName}* classes so variant changes don't leave
+  // stale ones behind when Parchment swaps the inner element in place.
+  const prefix = `quolt-${blotName}`;
+  for (const cls of Array.from(node.classList)) {
+    if (cls === prefix || cls.startsWith(`${prefix}-`)) {
+      node.classList.remove(cls);
+    }
+  }
+
+  let cls: string;
+  if (config.class) {
+    cls = typeof config.class === 'function' ? config.class(value) : config.class;
+  } else if (tagArray) {
+    cls = `${prefix} ${prefix}-${String(value)}`;
+  } else {
+    cls = prefix;
+  }
+  if (cls) node.classList.add(...cls.split(/\s+/).filter(Boolean));
 }
 
 /**

@@ -1,0 +1,27 @@
+{
+  "name": "quolt-themes",
+  "version": "0.0.0",
+  "description": "Default light + dark themes for Quolt — pure CSS, framework-agnostic.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./theme.css": "./src/theme.css"
+  },
+  "publishConfig": {
+    "exports": {
+      "./theme.css": "./dist/theme.css"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1"
+  }
+}

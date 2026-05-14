@@ -1,0 +1,682 @@
+/*
+ * Quolt — default theme (light + dark).
+ *
+ * Apply by setting data-quolt-theme="light" | "dark" on the editor's root
+ * element. The <QuoltEditor> component does this automatically based on its
+ * `theme` prop (auto | light | dark). For manual use, set the attribute
+ * yourself on any wrapper.
+ *
+ * Every visual property resolves through CSS custom properties so any token
+ * can be overridden at any scope:
+ *
+ *   .my-editor-wrapper {
+ *     --quolt-accent: #ff5c7c;
+ *     --quolt-radius-md: 4px;
+ *   }
+ */
+
+/* ---------------------------------------------------------------------------
+ * Theme-agnostic tokens — typography, spacing, radius, focus, motion.
+ * Apply to either theme via the attribute-presence selector.
+ * ------------------------------------------------------------------------- */
+[data-quolt-theme] {
+  /* Typography — families */
+  --quolt-font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --quolt-font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Typography — UI chrome (toolbar, menus, labels) */
+  --quolt-ui-fs-caption: 11px;
+  --quolt-ui-lh-caption: 1.45;
+  --quolt-ui-fs-body:    13px;
+  --quolt-ui-lh-body:    1.45;
+  --quolt-ui-fs-lg:      14px;
+  --quolt-ui-lh-lg:      1.45;
+
+  /* Typography — editor content (relaxed, reader-facing) */
+  --quolt-fs-body: 16px;   --quolt-lh-body: 1.65;
+  --quolt-fs-h6:   16px;   --quolt-lh-h6:   1.5;
+  --quolt-fs-h5:   18px;   --quolt-lh-h5:   1.5;
+  --quolt-fs-h4:   20px;   --quolt-lh-h4:   1.45;
+  --quolt-fs-h3:   24px;   --quolt-lh-h3:   1.35;
+  --quolt-fs-h2:   30px;   --quolt-lh-h2:   1.25;
+  --quolt-fs-h1:   36px;   --quolt-lh-h1:   1.20;
+
+  /* Typography — weights */
+  --quolt-fw-regular:  400;
+  --quolt-fw-medium:   500;
+  --quolt-fw-semibold: 600;
+  --quolt-fw-bold:     700;
+
+  /* Spacing — 4px base, 8 steps */
+  --quolt-space-1:  4px;
+  --quolt-space-2:  8px;
+  --quolt-space-3: 12px;
+  --quolt-space-4: 16px;
+  --quolt-space-5: 24px;
+  --quolt-space-6: 32px;
+  --quolt-space-7: 48px;
+  --quolt-space-8: 64px;
+
+  /* Border radius */
+  --quolt-radius-sm:  6px;  /* inputs, buttons, icon chips */
+  --quolt-radius-md:  8px;  /* panels, toolbar, cards */
+  --quolt-radius-lg: 12px;  /* modals, popovers, editor surface */
+
+  /* Focus ring — applied to every interactive element */
+  --quolt-focus-ring-width:  2px;
+  --quolt-focus-ring-offset: 2px;
+
+  /* Motion */
+  --quolt-duration: 160ms;
+  --quolt-ease:     cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------------------------------------------------------------------------
+ * Light theme
+ * ------------------------------------------------------------------------- */
+[data-quolt-theme='light'] {
+  /* Surfaces */
+  --quolt-bg:         #ffffff;
+  --quolt-panel-bg:   #fafafa;
+  --quolt-toolbar-bg: #f9fafb;
+  --quolt-code-bg:    #f4f4f7;
+  --quolt-embed-bg:   #f6f5fb;  /* subtle brand wash — image/divider/embed backdrops + active state */
+
+  /* Text */
+  --quolt-text:    #1a1a1a;
+  --quolt-muted:   #6b7280;
+  --quolt-link:    #6346e8;
+  --quolt-error:   #d92d20;
+  --quolt-success: #15803d;
+
+  /* Brand */
+  --quolt-accent:    #7c5cff;
+  --quolt-accent-fg: #ffffff;
+
+  /* Borders */
+  --quolt-border:        #e5e7eb;
+  --quolt-border-strong: #d4d4d8;
+
+  /* State */
+  --quolt-hover:      rgba(17, 17, 17, 0.04);
+  --quolt-active:     rgba(17, 17, 17, 0.07);
+  --quolt-focus-ring: rgba(124, 92, 255, 0.50);
+  --quolt-selection:  rgba(124, 92, 255, 0.15);
+
+  /* Elevation — three levels */
+  --quolt-shadow-1: 0 1px 2px rgba(17, 24, 39, 0.06);
+  --quolt-shadow-2: 0 4px 12px rgba(17, 24, 39, 0.08), 0 1px 3px rgba(17, 24, 39, 0.04);
+  --quolt-shadow-3: 0 16px 40px rgba(17, 24, 39, 0.12), 0 2px 6px rgba(17, 24, 39, 0.06);
+}
+
+/* ---------------------------------------------------------------------------
+ * Content base — styles for built-in formats inside the editor.
+ *
+ * These rules map the foundation tokens onto known targets (the Quill
+ * .ql-container/.ql-editor surface and the `quolt-*` classes our built-in
+ * blots emit). Editor *chrome* (toolbar, popover, menu) is intentionally
+ * NOT styled here — that lands with the toolbar/editor-surface design
+ * bundle. Values below are foundation-aligned defaults; refine in place
+ * when the bundle arrives.
+ * ------------------------------------------------------------------------- */
+[data-quolt-theme] .ql-container {
+  background: var(--quolt-bg);
+  color: var(--quolt-text);
+  font-family: var(--quolt-font-sans);
+  font-size: var(--quolt-fs-body);
+  line-height: var(--quolt-lh-body);
+  border: none;
+}
+
+[data-quolt-theme] .ql-editor ::selection {
+  background: var(--quolt-selection);
+}
+
+[data-quolt-theme] .ql-editor a {
+  color: var(--quolt-link);
+}
+
+[data-quolt-theme] .ql-editor .quolt-h1 {
+  font-size: var(--quolt-fs-h1); line-height: var(--quolt-lh-h1);
+  font-weight: var(--quolt-fw-semibold); letter-spacing: -0.02em;
+}
+[data-quolt-theme] .ql-editor .quolt-h2 {
+  font-size: var(--quolt-fs-h2); line-height: var(--quolt-lh-h2);
+  font-weight: var(--quolt-fw-semibold); letter-spacing: -0.015em;
+}
+[data-quolt-theme] .ql-editor .quolt-h3 {
+  font-size: var(--quolt-fs-h3); line-height: var(--quolt-lh-h3);
+  font-weight: var(--quolt-fw-semibold); letter-spacing: -0.01em;
+}
+[data-quolt-theme] .ql-editor .quolt-h4 {
+  font-size: var(--quolt-fs-h4); line-height: var(--quolt-lh-h4);
+  font-weight: var(--quolt-fw-semibold);
+}
+[data-quolt-theme] .ql-editor .quolt-h5 {
+  font-size: var(--quolt-fs-h5); line-height: var(--quolt-lh-h5);
+  font-weight: var(--quolt-fw-semibold);
+}
+[data-quolt-theme] .ql-editor .quolt-h6 {
+  font-size: var(--quolt-fs-h6); line-height: var(--quolt-lh-h6);
+  font-weight: var(--quolt-fw-semibold);
+}
+
+[data-quolt-theme] .ql-editor .quolt-blockquote {
+  border-left: 3px solid var(--quolt-accent);
+  padding: var(--quolt-space-1) var(--quolt-space-4);
+  color: var(--quolt-muted);
+  margin: var(--quolt-space-2) 0;
+}
+
+[data-quolt-theme] .ql-editor .quolt-code-block {
+  background: var(--quolt-code-bg);
+  padding: var(--quolt-space-3) var(--quolt-space-4);
+  border-radius: var(--quolt-radius-md);
+  font-family: var(--quolt-font-mono);
+  font-size: 0.9em;
+}
+
+/* ---------------------------------------------------------------------------
+ * Editor chrome — frame + toolbar + surface
+ *
+ * The frame composes the toolbar and the editor surface into one rounded
+ * container. Activating the frame is opt-in: wrap the editor with
+ * <div class="qe-frame" data-quolt-theme="…"> and place a <QuoltToolbar>
+ * directly inside. Inner content surfaces (`.ql-container`, `.ql-editor`)
+ * inherit padding + max-width via descendant rules so the foundation stays
+ * usable without the frame.
+ *
+ * Class taxonomy (see also packages/vue):
+ *   .qe-frame              outer rounded container
+ *   .qe-toolbar            top bar — holds segments + heading trigger + status
+ *   .qe-segment            floating cluster of related icon buttons
+ *   .qe-icon-btn           28×28 button — idle / hover / active / focus / disabled
+ *   .qe-heading-trigger    type-preview pill — opens the heading menu
+ *   .qe-menu / .qe-menu-*  the heading dropdown
+ *   .qe-status             right-aligned editor metadata
+ *   .qe-sep                vertical 1px divider (used in narrow layouts only)
+ * ------------------------------------------------------------------------- */
+.qe-frame {
+  width: 100%;
+  min-width: 0;
+  background: var(--quolt-bg);
+  color: var(--quolt-text);
+  border: 1px solid var(--quolt-border);
+  border-radius: var(--quolt-radius-lg);
+  font-family: var(--quolt-font-sans);
+  font-size: var(--quolt-ui-fs-body);
+  line-height: var(--quolt-ui-lh-body);
+  transition:
+    border-color var(--quolt-duration) var(--quolt-ease),
+    box-shadow var(--quolt-duration) var(--quolt-ease);
+  /* Container query so the toolbar can collapse / hide the status zone when
+     the frame is narrow without depending on the viewport width. */
+  container-type: inline-size;
+  /* Two non-obvious reasons NOT to set overflow: hidden here:
+     1. It would clip the heading menu popover opening downward into the
+        editor surface — the menu is in the toolbar's subtree.
+     2. It would become the nearest scroll container for `.qe-toolbar`'s
+        position: sticky, defeating the goal of sticking to the viewport.
+     The inner pieces (.qe-toolbar, .ql-container) round their own outer
+     corners below so the frame still reads as one piece. */
+  position: relative;
+}
+
+/* Whole-composition focus state. Border becomes accent; outer halo is a
+   color-mixed wash of the same accent — no new tokens introduced. */
+.qe-frame.is-focused {
+  border-color: var(--quolt-accent);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--quolt-accent) 14%, transparent);
+}
+
+/* Surface — apply chrome-grade padding + content max-width once the editor
+   lives inside a .qe-frame. Without the frame, the bare editor stays
+   un-padded so the foundation alone doesn't impose a layout. The bottom
+   corners pick up the frame's radius so the silhouette stays intact now
+   that .qe-frame no longer clips overflow. */
+.qe-frame .ql-container {
+  padding: var(--quolt-space-6) var(--quolt-space-6) var(--quolt-space-7);
+  border-bottom-left-radius: var(--quolt-radius-lg);
+  border-bottom-right-radius: var(--quolt-radius-lg);
+}
+.qe-frame .ql-editor {
+  padding: 0;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* ----- Toolbar — segmented control row -----
+   Instead of a flat row with vertical dividers, the toolbar reads as a row
+   of floating button SEGMENTS sitting on the toolbar surface. Each segment
+   is its own quietly-elevated card, so grouping is communicated by the
+   segments themselves — no .qe-sep needed inside a segment. */
+.qe-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--quolt-space-3);
+  padding: 8px var(--quolt-space-3);
+  background: var(--quolt-toolbar-bg);
+  border-bottom: 1px solid var(--quolt-border);
+  box-shadow: inset 0 1px 0 color-mix(in oklab, var(--quolt-bg) 80%, transparent);
+  backdrop-filter: saturate(180%) blur(8px);
+  min-height: 50px;
+  /* Stick to the viewport top once the user scrolls past the editor's top
+     edge. The frame deliberately does not clip overflow (see .qe-frame) so
+     the nearest scroll container is the page itself — sticking to top:0
+     means "top of viewport," which is the expected editor UX. */
+  position: sticky;
+  top: 0;
+  /* Above the editor surface so the heading menu (z:50, nested in this
+     stacking context) and the toolbar itself sit cleanly over content. */
+  z-index: 5;
+  /* Match the frame's radius on the top corners — the frame no longer
+     clips, so the toolbar paints its own rounded shoulders. The is-stuck
+     state flattens these once the toolbar detaches and floats. */
+  border-top-left-radius: var(--quolt-radius-lg);
+  border-top-right-radius: var(--quolt-radius-lg);
+  transition: border-radius var(--quolt-duration) var(--quolt-ease),
+              box-shadow    var(--quolt-duration) var(--quolt-ease);
+}
+[data-quolt-theme='dark'] .qe-toolbar {
+  box-shadow: inset 0 1px 0 color-mix(in oklab, #ffffff 6%, transparent);
+}
+
+/* Sentinel — a 1px element positioned just above the toolbar's natural top.
+   QuoltToolbar.vue watches it with IntersectionObserver: when it scrolls
+   out of view, the toolbar is "stuck" and gets the is-stuck class. */
+.qe-toolbar-sentinel {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/* Stuck state — the toolbar has detached from the frame top and is floating
+   at viewport top. Flatten the top corners (nothing visually anchors them
+   anymore) and add a soft elevation shadow that says "I'm above the page." */
+.qe-toolbar.is-stuck {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--quolt-bg) 80%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+}
+[data-quolt-theme='dark'] .qe-toolbar.is-stuck {
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, #ffffff 6%, transparent),
+    0 4px 12px rgba(0, 0, 0, 0.30);
+}
+
+/* Scrollable middle — segments live in here so they can overflow
+   horizontally without clipping the heading menu (which is a sibling of
+   this wrapper, NOT a descendant — its popover escapes downward freely).
+   Spec quirk: `overflow-x: auto` forces `overflow-y` to behave as `auto`
+   too; that's fine here because nothing inside .qe-toolbar-scroll needs
+   to escape vertically. */
+.qe-toolbar-scroll {
+  display: flex;
+  align-items: center;
+  gap: var(--quolt-space-3);
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.qe-toolbar-scroll::-webkit-scrollbar { display: none; }
+
+.qe-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  background: var(--quolt-bg);
+  border: 1px solid var(--quolt-border);
+  border-radius: 9px;
+  box-shadow: var(--quolt-shadow-1);
+  flex-shrink: 0;
+}
+[data-quolt-theme='dark'] .qe-segment {
+  background: color-mix(in oklab, var(--quolt-bg) 70%, var(--quolt-toolbar-bg) 30%);
+}
+
+.qe-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--quolt-border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+.qe-segment > .qe-sep { display: none; }
+
+/* ----- Icon button ----- */
+.qe-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 5px;
+  color: var(--quolt-text);
+  flex-shrink: 0;
+  position: relative;
+  transition: background var(--quolt-duration) var(--quolt-ease),
+              color var(--quolt-duration) var(--quolt-ease),
+              box-shadow var(--quolt-duration) var(--quolt-ease);
+}
+.qe-icon-btn svg { width: 15px; height: 15px; display: block; }
+
+.qe-icon-btn:hover,
+.qe-icon-btn.is-hover { background: var(--quolt-hover); }
+
+/* Active state — accent wash + 1.5px tab-active underline. Both effects
+   derive from --quolt-accent; no new tokens. */
+.qe-icon-btn.is-active {
+  background: color-mix(in oklab, var(--quolt-accent) 14%, transparent);
+  color: var(--quolt-accent);
+  box-shadow: inset 0 -1.5px 0 var(--quolt-accent);
+}
+[data-quolt-theme='dark'] .qe-icon-btn.is-active {
+  background: color-mix(in oklab, var(--quolt-accent) 22%, transparent);
+}
+
+.qe-icon-btn:focus-visible,
+.qe-icon-btn.is-focus {
+  outline: var(--quolt-focus-ring-width) solid var(--quolt-focus-ring);
+  outline-offset: var(--quolt-focus-ring-offset);
+}
+
+.qe-icon-btn.is-disabled {
+  opacity: 0.38;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* ----- Heading trigger — type-preview pill -----
+   The label takes the typography of the *active* format ("Heading 1" bold,
+   "Code block" mono, "Quote" italic). A small accent-tinted glyph badge
+   echoes the format. */
+.qe-heading-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 2px 6px 2px 4px;
+  background: var(--quolt-bg);
+  border: 1px solid var(--quolt-border);
+  border-radius: 9px;
+  box-shadow: var(--quolt-shadow-1);
+  color: var(--quolt-text);
+  font: inherit;
+  cursor: pointer;
+  min-width: 158px;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  transition: background var(--quolt-duration) var(--quolt-ease),
+              border-color var(--quolt-duration) var(--quolt-ease);
+}
+[data-quolt-theme='dark'] .qe-heading-trigger {
+  background: color-mix(in oklab, var(--quolt-bg) 70%, var(--quolt-toolbar-bg) 30%);
+}
+.qe-heading-trigger:hover,
+.qe-heading-trigger.is-hover,
+.qe-heading-trigger.is-open { border-color: var(--quolt-border-strong); }
+
+.qe-heading-trigger .glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: color-mix(in oklab, var(--quolt-accent) 14%, transparent);
+  color: var(--quolt-accent);
+  font-size: 10.5px;
+  font-weight: var(--quolt-fw-bold);
+  font-family: var(--quolt-font-mono);
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+[data-quolt-theme='dark'] .qe-heading-trigger .glyph {
+  background: color-mix(in oklab, var(--quolt-accent) 22%, transparent);
+}
+.qe-heading-trigger .label {
+  flex: 1;
+  text-align: left;
+  font-size: var(--quolt-ui-fs-body);
+  font-weight: var(--quolt-fw-medium);
+  font-family: var(--quolt-font-sans);
+  letter-spacing: 0;
+  color: var(--quolt-text);
+  padding-right: var(--quolt-space-2);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qe-heading-trigger.style-h1 .label { font-weight: var(--quolt-fw-bold); letter-spacing: -0.015em; }
+.qe-heading-trigger.style-h2 .label { font-weight: var(--quolt-fw-bold); letter-spacing: -0.01em; }
+.qe-heading-trigger.style-h3 .label { font-weight: var(--quolt-fw-semibold); }
+.qe-heading-trigger.style-quote .label { font-style: italic; color: var(--quolt-muted); }
+.qe-heading-trigger.style-code .label { font-family: var(--quolt-font-mono); font-size: 12px; }
+.qe-heading-trigger.style-paragraph .label { font-weight: var(--quolt-fw-medium); }
+
+.qe-heading-trigger .chev {
+  width: 14px;
+  height: 14px;
+  color: var(--quolt-muted);
+  flex-shrink: 0;
+}
+
+/* ----- Status zone — right-aligned editor metadata ----- */
+.qe-status {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--quolt-font-mono);
+  font-size: 11px;
+  color: var(--quolt-muted);
+  padding-right: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.qe-status b { color: var(--quolt-text); font-weight: var(--quolt-fw-medium); }
+.qe-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--quolt-success);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--quolt-success) 18%, transparent);
+}
+.qe-status .sep { color: var(--quolt-border-strong); }
+
+@container (max-width: 760px) {
+  .qe-status { display: none; }
+}
+
+/* ----- Heading menu ----- */
+.qe-menu {
+  width: 280px;
+  background: var(--quolt-bg);
+  border: 1px solid var(--quolt-border);
+  border-radius: var(--quolt-radius-md);
+  box-shadow: var(--quolt-shadow-3);
+  padding: var(--quolt-space-1);
+  /* Positioned by the consuming component — defaults to absolute below trigger. */
+  position: absolute;
+  z-index: 50;
+}
+.qe-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--quolt-space-3);
+  padding: 8px var(--quolt-space-3);
+  border-radius: var(--quolt-radius-sm);
+  color: var(--quolt-text);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+}
+.qe-menu-item:hover,
+.qe-menu-item.is-hover { background: var(--quolt-hover); }
+.qe-menu-item.is-current {
+  background: var(--quolt-embed-bg);
+  color: var(--quolt-accent);
+}
+.qe-menu-item .glyph {
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+  font-family: var(--quolt-font-sans);
+  font-size: var(--quolt-ui-fs-body);
+  font-weight: var(--quolt-fw-semibold);
+  color: var(--quolt-muted);
+  letter-spacing: 0.02em;
+}
+.qe-menu-item.is-current .glyph { color: var(--quolt-accent); }
+.qe-menu-item .label { flex: 1; min-width: 0; }
+.qe-menu-item .label .preview { display: block; line-height: 1.1; }
+.qe-menu-item .kbd {
+  font-family: var(--quolt-font-mono);
+  font-size: var(--quolt-ui-fs-caption);
+  color: var(--quolt-muted);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.qe-menu-divider {
+  height: 1px;
+  background: var(--quolt-border);
+  margin: var(--quolt-space-1) var(--quolt-space-2);
+}
+
+/* Type-preview rows — each format rendered in its own scale */
+.qe-mp-h1 { font-size: 22px; font-weight: var(--quolt-fw-semibold); letter-spacing: -0.015em; }
+.qe-mp-h2 { font-size: 19px; font-weight: var(--quolt-fw-semibold); letter-spacing: -0.01em; }
+.qe-mp-h3 { font-size: 16px; font-weight: var(--quolt-fw-semibold); }
+.qe-mp-h4 { font-size: 15px; font-weight: var(--quolt-fw-semibold); }
+.qe-mp-h5 { font-size: 14px; font-weight: var(--quolt-fw-semibold); }
+.qe-mp-h6 { font-size: 13px; font-weight: var(--quolt-fw-semibold); text-transform: uppercase; letter-spacing: 0.06em; }
+.qe-mp-p  { font-size: 13px; font-weight: var(--quolt-fw-regular); }
+.qe-mp-quote { font-size: 13px; font-weight: var(--quolt-fw-regular); font-style: italic; }
+.qe-mp-code  { font-family: var(--quolt-font-mono); font-size: 12px; }
+
+/* Trigger holder so the menu can position itself relative to the trigger. */
+.qe-heading-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Quill's stock Snow toolbar is suppressed inside a Quolt frame — the
+   QuoltToolbar replaces it. Snow's CSS is still useful for list bullets and
+   editor defaults; only the toolbar chrome conflicts. */
+.qe-frame .ql-toolbar.ql-snow { display: none; }
+
+/* ---------------------------------------------------------------------------
+ * Floating menus — the base layer for content-attached popovers (link
+ * editor, image controls, slash-menu results, custom-blot menus). The
+ * <QuoltFloatingMenu> primitive positions itself with position: fixed and
+ * applies these styles to its root.
+ *
+ * The .qe-floating shell is intentionally minimal — surface + border +
+ * shadow only. Each menu lays out its own contents (.qe-linkmenu,
+ * .qe-imagemenu, etc.) so different menu types can size and arrange
+ * differently without fighting a shared layout.
+ * ------------------------------------------------------------------------- */
+.qe-floating {
+  background: var(--quolt-bg);
+  border: 1px solid var(--quolt-border);
+  border-radius: var(--quolt-radius-md);
+  box-shadow: var(--quolt-shadow-3);
+  color: var(--quolt-text);
+  font-family: var(--quolt-font-sans);
+  font-size: var(--quolt-ui-fs-body);
+  z-index: 100;
+}
+
+/* Built-in link menu */
+.qe-linkmenu {
+  display: flex;
+  align-items: center;
+  gap: var(--quolt-space-2);
+  padding: 6px 8px;
+  min-width: 240px;
+  max-width: 420px;
+}
+.qe-linkmenu-url {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--quolt-font-mono);
+  font-size: var(--quolt-ui-fs-caption);
+  color: var(--quolt-link);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.qe-linkmenu-url:hover { text-decoration: underline; }
+.qe-linkmenu-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--quolt-text);
+  font-family: inherit;
+  font-size: var(--quolt-ui-fs-body);
+  font-weight: var(--quolt-fw-medium);
+  padding: 4px 8px;
+  border-radius: var(--quolt-radius-sm);
+  cursor: pointer;
+  transition: background var(--quolt-duration) var(--quolt-ease);
+}
+.qe-linkmenu-btn:hover { background: var(--quolt-hover); }
+.qe-linkmenu-btn--danger { color: var(--quolt-error); }
+.qe-linkmenu-btn--danger:hover { background: color-mix(in oklab, var(--quolt-error) 10%, transparent); }
+
+/* ---------------------------------------------------------------------------
+ * Dark theme — uses border-based separation in place of stacked shadows
+ * so elevation reads clearly on dark surfaces without grey halos.
+ * ------------------------------------------------------------------------- */
+[data-quolt-theme='dark'] {
+  /* Surfaces */
+  --quolt-bg:         #14161d;
+  --quolt-panel-bg:   #1a1d27;
+  --quolt-toolbar-bg: #1c1f2a;
+  --quolt-code-bg:    #1f2230;
+  --quolt-embed-bg:   #1d1c2c;
+
+  /* Text */
+  --quolt-text:    #e6e6ec;
+  --quolt-muted:   #8b8fa3;
+  --quolt-link:    #a48aff;
+  --quolt-error:   #f87171;
+  --quolt-success: #4ade80;
+
+  /* Brand */
+  --quolt-accent:    #7c5cff;
+  --quolt-accent-fg: #ffffff;
+
+  /* Borders */
+  --quolt-border:        #2a2d3a;
+  --quolt-border-strong: #3a3e4d;
+
+  /* State */
+  --quolt-hover:      rgba(255, 255, 255, 0.05);
+  --quolt-active:     rgba(255, 255, 255, 0.08);
+  --quolt-focus-ring: rgba(124, 92, 255, 0.60);
+  --quolt-selection:  rgba(124, 92, 255, 0.25);
+
+  /* Elevation — pair shadows with subtle borders since pure drop-shadows
+     wash out against a dark background */
+  --quolt-shadow-1: 0 0 0 1px var(--quolt-border);
+  --quolt-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--quolt-border);
+  --quolt-shadow-3: 0 16px 40px rgba(0, 0, 0, 0.60), 0 0 0 1px var(--quolt-border-strong);
+}

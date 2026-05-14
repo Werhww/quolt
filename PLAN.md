@@ -247,19 +247,33 @@ If demand surfaces later for hierarchy, the right answer is probably "use ProseM
 
 ### Primitive: `defineBlock`
 
-The signature is locked in; the wrapper-class generator is pending.
+Shipped. The generator builds `BlockBlot` subclasses with `quolt-*` class naming. Two shapes are supported:
 
 ```ts
-defineBlock<V>({
+// Single-tag block
+defineBlock<true>({
+  name: 'blockquote',
+  tag: 'blockquote',
+});
+
+// Variant block — value is a 1-based index into the tag array
+defineBlock<HeaderLevel>({
+  name: 'header',
+  tag: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+  class: (level) => `quolt-h${level}`,
+});
+
+// Future shape — component-backed block (render not yet implemented)
+defineBlock<{ tone: 'info' | 'warning' }>({
   name: 'callout',
   tag: 'div',
-  render?: FormatRenderer<V>,           // optional component-backed renderer
+  render?: FormatRenderer<V>,           // optional component-backed renderer (TODO)
   slash?: { label, icon?, aliases? },   // metadata for the slash menu module
   transformFromText?: (text) => V|null  // "> " → { tone: 'info' }, etc.
 });
 ```
 
-Same `render` contract as `defineEmbed`. Vue/React adapters provide `defineComponentBlock` sugar.
+Variant blocks change tag via `replaceWith`, so the underlying element is always swapped (H1 → H2 builds a fresh `<h2>`). Vue/React adapters will provide `defineComponentBlock` sugar once the `render` field is implemented.
 
 ### Optional modules
 
@@ -370,13 +384,14 @@ For total control, use `theme="none"` and write your own CSS over Quill's DOM. T
 
 ### Theme system roadmap
 
-1. **Build `packages/core/theme/` CSS** — light + dark variants, exposed as the subpath import `'quolt-core/theme.css'`.
+1. ✅ **Build `packages/themes` CSS** — light + dark token sets, exposed as the subpath import `'quolt-themes/theme.css'`.
 2. **Add `theme` prop** to `<QuoltEditor>` in `quolt-vue` — sets `data-quolt-theme` and listens for `prefers-color-scheme` when `auto`.
 3. **`useQuoltTheme()` composable** — reactive `{ theme: 'light' | 'dark', setTheme(value) }` for surrounding UI that wants to follow the editor's theme.
-4. **Document tokens** in `apps/docs/guide/theming.md`.
-5. **Playground theme switcher** — toolbar in `apps/playground` for dogfooding.
+4. **Component CSS** — toolbar / menu / popover / modal styling against `quolt-*` class names, landed from `design/inbox/` bundles.
+5. **Document tokens** in `apps/docs/guide/theming.md`.
+6. **Playground theme switcher** — toolbar in `apps/playground` for dogfooding.
 
-This is the #1 next milestone — biggest visual differentiation for the least implementation risk.
+Step 1 is the foundation; steps 2–3 wire it into Vue; step 4 makes the editor itself look designed.
 
 ---
 
@@ -474,33 +489,44 @@ After `quolt-vue` ships v0.1 and the API has settled — currently estimated as 
 ### Done
 
 - Monorepo scaffolded with pnpm workspaces
-- `packages/core`, `packages/vue` exist with publishConfig src/dist split
+- `packages/core`, `packages/vue`, `packages/themes` exist with publishConfig src/dist split
 - Shared `tsconfig.base.json` (strict, ESM, bundler resolution)
 - **Layer 2 API skeleton** — `QuoltEditor` class with `format`, `insert`, `content`, `selection` groups
 - **`on/off` event mapping** — `change` ↔ `text-change`, `selection` ↔ `selection-change`
 - **`defineEmbed` primitive** — declarative (`toDOM`) and renderer-based (`render`) paths
+- **`defineMark` primitive** — Inline blot generator (boolean / attribute / style variants)
+- **`defineBlock` primitive** — BlockBlot generator (single-tag + variant-tag-array shapes)
+- **Built-in marks** — bold, italic, underline, strike, link, color, background
+- **Built-in blocks** — header(1–6) → `quolt-h1..quolt-h6`, blockquote, code-block
+- **FormatApi sugar** — `bold`, `italic`, `underline`, `strike`, `heading(level)`, `blockquote`, `codeBlock`
 - **Delta as canonical content form** — `v-model` binds Delta, `v-model:html` opt-in for HTML
 - **Vue adapter** — `<QuoltEditor>`, `useQuolt()` composable, `defineComponentEmbed`
 - **Playground** — `apps/playground` (Vite + Vue) with mention chip + divider demos
-- **Vitest** — root config + happy-dom + core smoke tests
+- **Vitest** — root config + happy-dom + core smoke tests + built-in mark/block tests
 - **VitePress docs** — `apps/docs` skeleton with getting-started, custom-formats, component-embeds, API reference
+- **`packages/themes`** — token taxonomy (CSS custom properties) + default light + dark stylesheets, framework-agnostic. Designed in Claude Design, lifted from `design/inbox/system-foundation/`.
+- **Editor chrome CSS** — `.qe-frame`, `.qe-toolbar`, `.qe-segment`, `.qe-icon-btn`, `.qe-heading-trigger`, `.qe-menu`, `.qe-status`. Framework-agnostic; lives in `packages/themes`. Lifted from `design/inbox/toolbar/`.
+- **`<QuoltToolbar>` Vue SFC** — segmented toolbar with heading dropdown (type-preview labels), inline marks, lists, blockquote, code block, link, image, divider. Reactive active state via `editor.on('selection' | 'change')`. Click-outside-close menu. Sticks to viewport top when scrolled; segments scroll horizontally when narrow (heading dropdown stays outside the scroll wrapper so its menu still escapes downward). Stuck state detected via IntersectionObserver on a 1px sentinel; CSS flattens top corners and adds elevation.
+- **Floating menu base layer** — `<QuoltFloatingMenu>` primitive (position:fixed against an anchor element, auto-flip, repositions on scroll/resize/editor-change) plus `useAnchorResolver` / `useFormatAnchor` / `useEmbedAnchor` composables. `<QuoltLinkMenu>` is built on top as the reference implementation. Users compose `useEmbedAnchor('mention')` + `<QuoltFloatingMenu>` for custom menus on their own blots.
 
 ### In progress / next up
 
-**Built-in Parchment-native blots (priority #1 — defines class names everything else depends on)**
-- `defineMark` factory implementation (Inline blot generator — boolean / attribute / style variants)
-- Built-in marks: bold, italic, underline, strike, link, color, background
-- `defineBlock` factory implementation (BlockBlot generator)
-- Built-in blocks: header(1–6), blockquote, code-block
-- Built-in embeds: image (divider already shipped)
+**Remaining built-in Parchment-native blots**
+- Built-in image embed (using existing `defineEmbed`) — replace stock Quill image with Quolt-native version carrying `quolt-image` class. Divider already shipped.
 
-**`packages/themes` (priority #2 — needs Parchment-native class names from step #1)**
-- Token taxonomy (CSS custom properties)
-- Default light + dark stylesheets
-- Icon set
-- `theme` prop on `<QuoltEditor>` (`auto` | `light` | `dark` | `none`)
+**Vue theme integration (unblocked now that `packages/themes` exists)**
+- `theme` prop on `<QuoltEditor>` (`auto` | `light` | `dark` | `none`) — set `data-quolt-theme` and listen for `prefers-color-scheme` when `auto`
 - `useQuoltTheme()` composable in `quolt-vue`
 - Playground theme switcher
+
+**Class taxonomy** — two prefixes by design:
+- `quolt-*` — classes emitted by built-in blots (`quolt-h1`, `quolt-blockquote`, `quolt-code-block`). Content scope.
+- `qe-*` — editor chrome classes (`qe-frame`, `qe-toolbar`, `qe-icon-btn`, `qe-menu`). Surround scope.
+
+**Themes — remaining chrome**
+- Icon set is shipped (inline in `<QuoltIcon>`). Future: factor to a separate `quolt-icons` package if other surfaces (slash menu, modals) want the same set.
+- Mobile/iOS-style `.qe-frame--mobile` variant from the design (touch targets, bottom-sheet for block formats) — designed but not lifted yet. Defer until a real mobile consumer asks.
+- Overflow `More` popover for narrow viewports — designed; lift when there's an actual responsive consumer.
 
 **Typed keyboard shortcuts (independent — slots in anywhere)**
 - Shortcut parser + template-literal type

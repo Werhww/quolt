@@ -12,6 +12,7 @@
   "dependencies": {
     "quill": "^2.0.3",
     "quolt-core": "workspace:*",
+    "quolt-themes": "workspace:*",
     "quolt-vue": "workspace:*",
     "vue": "^3.5.13"
   },

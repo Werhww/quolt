@@ -1,5 +1,15 @@
 export { default as QuoltEditor } from './QuoltEditor.vue';
+export { default as QuoltToolbar } from './QuoltToolbar.vue';
+export { default as QuoltIcon } from './QuoltIcon.vue';
+export { default as QuoltFloatingMenu } from './QuoltFloatingMenu.vue';
+export { default as QuoltLinkMenu } from './QuoltLinkMenu.vue';
 export { useQuolt } from './useQuolt.js';
+export {
+  useAnchorResolver,
+  useFormatAnchor,
+  useEmbedAnchor,
+  type AnchorResolver,
+} from './floatingAnchors.js';
 export { defineComponentEmbed } from './defineComponentEmbed.js';
 export { editorInjectionKey } from './injection.js';
 

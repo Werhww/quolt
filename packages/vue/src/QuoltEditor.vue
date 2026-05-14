@@ -6,16 +6,38 @@ import {
   provide,
   ref,
   shallowRef,
+  toRaw,
   watch,
   type Ref,
 } from 'vue';
 import {
+  Delta as DeltaCtor,
   QuoltEditor,
   type ChangeEvent,
   type Delta,
   type QuoltFormatDefinition,
   type SelectionEvent,
 } from 'quolt-core';
+
+// Vue 3's `ref(deltaInstance)` deeply proxies the Delta, including the inner
+// `ops` array and each op object. Quill's `new Delta(delta)` then copies
+// `delta.ops` by reference — the proxied array ends up inside Quill's
+// internals and Parchment's clone path eventually trips over a property
+// access that doesn't survive the Proxy ("after2.appendChild is not a
+// function"). We rebuild the Delta from a structured clone of its ops so
+// Quill only ever sees plain objects.
+function unwrapDelta(value: unknown): Delta | undefined {
+  if (!value || typeof value !== 'object' || !('ops' in value)) return undefined;
+  const raw = toRaw(value as Delta);
+  const rawOps = toRaw(raw.ops) as readonly unknown[];
+  const cleanOps = rawOps.map((op) => {
+    const rawOp = toRaw(op) as Record<string, unknown>;
+    const out: Record<string, unknown> = { ...rawOp };
+    if (rawOp.attributes) out.attributes = { ...toRaw(rawOp.attributes) as object };
+    return out;
+  });
+  return new DeltaCtor(cleanOps);
+}
 
 import { editorInjectionKey } from './injection.js';
 
@@ -71,8 +93,13 @@ provide(editorInjectionKey, editorRef);
 onMounted(() => {
   if (!container.value) return;
 
+  const rawInitial =
+    props.initialContent && typeof props.initialContent === 'object' && 'ops' in props.initialContent
+      ? unwrapDelta(props.initialContent)
+      : props.initialContent;
+  const rawModel = unwrapDelta(props.modelValue);
   const seed: Delta | string | undefined =
-    props.initialContent ?? props.modelValue ?? props.html;
+    rawInitial ?? rawModel ?? props.html;
 
   const editor = new QuoltEditor(container.value, {
     placeholder: props.placeholder,
@@ -109,9 +136,11 @@ watch(
     if (emittingFromEditor) return;
     const editor = editorRef.value;
     if (!editor || !next) return;
-    if (deltaOpsEqual(editor.content.getDelta(), next)) return;
+    const clean = unwrapDelta(next);
+    if (!clean) return;
+    if (deltaOpsEqual(editor.content.getDelta(), clean)) return;
     ingestingFromModel = true;
-    editor.content.setDelta(next);
+    editor.content.setDelta(clean);
     queueMicrotask(() => {
       ingestingFromModel = false;
     });

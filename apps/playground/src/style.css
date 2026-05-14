@@ -71,10 +71,12 @@ header p {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 12px;
 }
 
-button {
+/* Scope playground-shell button styling to .ghost-btn so the toolbar's own
+   button rules (.qe-icon-btn, .qe-heading-trigger, .qe-menu-item) win
+   without specificity battles. */
+.ghost-btn {
   background: #1c1f2a;
   color: var(--text);
   border: 1px solid var(--border);
@@ -85,28 +87,20 @@ button {
   transition: background 0.1s ease;
 }
 
-button:hover { background: #252a38; }
-button:active { background: #1c1f2a; }
+.ghost-btn:hover { background: #252a38; }
+.ghost-btn:active { background: #1c1f2a; }
 
-.quolt-editor {
-  min-height: 280px;
-  background: #ffffff;
-  color: #111;
-  border-radius: 8px;
-  overflow: hidden;
-}
+/* The Quolt frame (.qe-frame) brings its own rounded chrome + border via
+   the theme package — no shell wrapper needed here. The QuoltEditor sits
+   directly inside it. */
 
-/* Quill snow theme tweaks for the dark shell */
-.ql-toolbar.ql-snow {
-  border: 1px solid var(--border);
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
-  background: #f4f4f7;
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
-.ql-container.ql-snow {
-  border: 1px solid var(--border);
-  border-radius: 0 0 8px 8px;
-}
+.panel-head h2 { margin: 0; }
 
 pre.inspect {
   margin: 0;

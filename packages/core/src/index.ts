@@ -19,6 +19,7 @@ export type {
 } from './types.js';
 
 export type { FormatApi } from './api/format.js';
+export type { HeaderLevel } from './builtin/blocks/header.js';
 export type { InsertApi } from './api/insert.js';
 export type { ContentApi } from './api/content.js';
 export type { SelectionApi } from './api/selection.js';

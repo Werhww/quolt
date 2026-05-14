@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Very early scaffold. `QuoltEditor` in `packages/core` currently only wraps `new Quill(...)` and exposes a `quill` escape hatch — none of the Layer 2 API (`format.*`, `insert.*`, `content.*`, `selection.*`, `on/off`) exists yet. See `PLAN.md` for the full roadmap; treat it as the source of truth for design decisions and update it when those decisions change.
+Early but functional. `QuoltEditor` in `packages/core` exposes the full Layer 2 API (`format.*`, `insert.*`, `content.*`, `selection.*`, `on/off`, `shortcuts.*`). The `defineEmbed` / `defineMark` / `defineBlock` factories all ship; built-in marks (bold, italic, underline, strike, link, color, background) and built-in blocks (header 1–6, blockquote, code-block) are registered automatically. `packages/themes` ships the default light + dark token stylesheet plus editor-chrome CSS (`quolt-themes/theme.css`). `packages/vue` ships `<QuoltEditor>`, `<QuoltToolbar>` (sticky segmented toolbar with heading dropdown), `<QuoltFloatingMenu>` (positioning primitive for content-attached popovers), `<QuoltLinkMenu>` (built-in link editor), `<QuoltIcon>`, plus the anchor composables (`useAnchorResolver` / `useFormatAnchor` / `useEmbedAnchor`). See `PLAN.md` for the full roadmap; treat it as the source of truth for design decisions and update it when those decisions change.
+
+**Class naming taxonomy:** `quolt-*` classes come from built-in blots and carry content semantics (`quolt-h1`, `quolt-blockquote`). `qe-*` classes come from the chrome design and scope the editor surround (`qe-frame`, `qe-toolbar`, `qe-icon-btn`). Don't mix prefixes; consumers can re-style either without colliding.
 
 ## Commands
 

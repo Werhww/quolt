@@ -1,5 +1,8 @@
 import Quill from 'quill';
 
+import { blockquoteBlock } from './blocks/blockquote.js';
+import { codeBlockBlock } from './blocks/code-block.js';
+import { headerBlock } from './blocks/header.js';
 import { backgroundMark } from './marks/background.js';
 import { boldMark } from './marks/bold.js';
 import { colorMark } from './marks/color.js';
@@ -31,17 +34,27 @@ export function registerBuiltinFormats(): void {
   colorMark.register(Quill);
   backgroundMark.register(Quill);
 
-  // Blocks and embeds will land here as their factories complete.
+  // Blocks (line-level formatting)
+  headerBlock.register(Quill);
+  blockquoteBlock.register(Quill);
+  codeBlockBlock.register(Quill);
+
+  // Embeds will land here as their factories complete.
 }
 
 export {
   backgroundMark,
+  blockquoteBlock,
   boldMark,
+  codeBlockBlock,
   colorMark,
+  headerBlock,
   italicMark,
   linkMark,
   strikeMark,
   underlineMark,
 };
+
+export type { HeaderLevel } from './blocks/header.js';
 
 export { getDefaultShortcuts } from './shortcuts.js';
