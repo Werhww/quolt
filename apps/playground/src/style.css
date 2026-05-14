@@ -1,0 +1,145 @@
+:root {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bg: #0b0c10;
+  --panel: #14161d;
+  --border: #2a2d3a;
+  --text: #e6e6ec;
+  --muted: #8b8fa3;
+  --accent: #7c5cff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+}
+
+header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+button {
+  background: #1c1f2a;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+button:hover { background: #252a38; }
+button:active { background: #1c1f2a; }
+
+.quolt-editor {
+  min-height: 280px;
+  background: #ffffff;
+  color: #111;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Quill snow theme tweaks for the dark shell */
+.ql-toolbar.ql-snow {
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: #f4f4f7;
+}
+.ql-container.ql-snow {
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+}
+
+pre.inspect {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow: auto;
+  color: #cfd2dc;
+}
+
+.mention-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(124, 92, 255, 0.12);
+  color: var(--accent);
+  font-weight: 500;
+  font-size: 0.95em;
+  vertical-align: baseline;
+  cursor: default;
+  user-select: none;
+}
+
+.mention-chip::before {
+  content: '@';
+  opacity: 0.6;
+  font-weight: 600;
+}
+
+/* Inline embed safety: ensure the chip sits inline with surrounding text */
+.quolt-embed-inline { display: inline-flex; vertical-align: baseline; }
+.quolt-embed-block { display: block; margin: 6px 0; }

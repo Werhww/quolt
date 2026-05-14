@@ -1,0 +1,48 @@
+{
+  "name": "quolt-vue",
+  "version": "0.0.0",
+  "description": "Vue 3 wrapper for Quolt — a modern wrapper for Quill.js.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vue-tsc -p tsconfig.json",
+    "dev": "vue-tsc -p tsconfig.json --watch",
+    "typecheck": "vue-tsc -p tsconfig.json --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "quolt-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": "^3.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.1.10"
+  }
+}
