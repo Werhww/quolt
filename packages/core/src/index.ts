@@ -23,6 +23,21 @@ export type { InsertApi } from './api/insert.js';
 export type { ContentApi } from './api/content.js';
 export type { SelectionApi } from './api/selection.js';
 
+export { displayCombo, isMac, parseCombo } from './shortcuts/index.js';
+export type {
+  AnyKeyCombo,
+  Key,
+  KeyCombo,
+  Modifier,
+  ShortcutBinding,
+  ShortcutContext,
+  ShortcutHandler,
+  ShortcutMap,
+  ShortcutValue,
+  ShortcutWhen,
+  ShortcutsApi,
+} from './shortcuts/index.js';
+
 export {
   defineEmbed,
   defineBlock,

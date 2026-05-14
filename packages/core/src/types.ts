@@ -1,6 +1,8 @@
 import type Quill from 'quill';
 import type { Delta } from 'quill';
 
+import type { ShortcutMap } from './shortcuts/types.js';
+
 export type QuillEngine = Quill;
 
 export type { Delta };
@@ -32,6 +34,12 @@ export interface QuoltOptions {
   quillTheme?: string | false;
   /** Custom format/embed/block definitions to register before the editor mounts. */
   formats?: QuoltFormatDefinition[];
+  /**
+   * Keyboard shortcuts. User-provided bindings have higher priority than
+   * Quolt's defaults, which have higher priority than Quill's built-ins. Use
+   * `editor.shortcuts.bind()` for runtime registration (lower priority).
+   */
+  shortcuts?: ShortcutMap;
 }
 
 /** Opaque marker — every defineX() call returns one of these. */

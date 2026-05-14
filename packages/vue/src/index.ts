@@ -16,12 +16,16 @@ export {
 } from 'quolt-core';
 
 export type {
+  AnyKeyCombo,
   ChangeEvent,
   ChangeHandler,
   ContentApi,
   FormatApi,
   FormatRenderer,
   InsertApi,
+  Key,
+  KeyCombo,
+  Modifier,
   MountedFormat,
   QuoltEvent,
   QuoltFormatDefinition,
@@ -31,9 +35,18 @@ export type {
   SelectionApi,
   SelectionEvent,
   SelectionHandler,
+  ShortcutBinding,
+  ShortcutContext,
+  ShortcutHandler,
+  ShortcutMap,
+  ShortcutValue,
+  ShortcutWhen,
+  ShortcutsApi,
   Source,
   DefineBlockConfig,
   DefineEmbedConfig,
   DefineMarkConfig,
   DomSpec,
 } from 'quolt-core';
+
+export { displayCombo, isMac, parseCombo } from 'quolt-core';

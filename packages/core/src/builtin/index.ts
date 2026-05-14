@@ -43,3 +43,5 @@ export {
   strikeMark,
   underlineMark,
 };
+
+export { getDefaultShortcuts } from './shortcuts.js';

@@ -5,12 +5,14 @@ import { createContentApi, type ContentApi } from './api/content.js';
 import { createFormatApi, type FormatApi } from './api/format.js';
 import { createInsertApi, type InsertApi } from './api/insert.js';
 import { createSelectionApi, type SelectionApi } from './api/selection.js';
-import { registerBuiltinFormats } from './builtin/index.js';
+import { getDefaultShortcuts, registerBuiltinFormats } from './builtin/index.js';
 import {
   registerEditor,
   unregisterEditor,
 } from './internal.js';
 import { getGlobalFormats } from './registry.js';
+import { buildQuillBindings, createShortcutsApi } from './shortcuts/build.js';
+import type { ShortcutMap, ShortcutsApi } from './shortcuts/types.js';
 import type {
   ChangeEvent,
   ChangeHandler,
@@ -33,6 +35,7 @@ export class QuoltEditor {
   readonly insert: InsertApi;
   readonly content: ContentApi;
   readonly selection: SelectionApi;
+  readonly shortcuts: ShortcutsApi;
 
   constructor(element: HTMLElement, options: QuoltOptions = {}) {
     this._container = element;
@@ -50,12 +53,46 @@ export class QuoltEditor {
       def.register(Quill);
     }
 
+    // Compose keyboard bindings. Quolt owns format-toggle shortcuts; we disable
+    // Quill's named defaults (bold/italic/underline) by passing null, which
+    // Quill's bindings loop skips. Our handlers then become the only thing
+    // registered for those keys.
+    //
+    // Tab/Enter/Backspace defaults (edit infrastructure — list/blockquote/code
+    // handling) stay untouched because they aren't in our override list.
+    const userShortcuts: ShortcutMap = options.shortcuts ?? {};
+    const builtinShortcuts: ShortcutMap = getDefaultShortcuts();
+    const userBindings = buildQuillBindings(this, userShortcuts);
+    const builtinBindings = buildQuillBindings(this, builtinShortcuts);
+    const userKeyboardOptions =
+      (options.modules?.['keyboard'] as { bindings?: Record<string, unknown> } | undefined) ??
+      {};
+
+    // Disable Quill defaults that Quolt replaces. The key names here match
+    // Quill's defaultOptions.bindings keys exactly (see Quill keyboard module).
+    const disableQuillDefaults: Record<string, null> = {
+      bold: null,
+      italic: null,
+      underline: null,
+    };
+
     const quillTheme = options.quillTheme === undefined ? 'snow' : options.quillTheme;
     this._quill = new Quill(element, {
       theme: quillTheme === false ? undefined : quillTheme,
       placeholder: options.placeholder,
       readOnly: options.readOnly,
-      modules: options.modules,
+      modules: {
+        ...options.modules,
+        keyboard: {
+          ...userKeyboardOptions,
+          bindings: {
+            ...disableQuillDefaults,
+            ...userBindings,
+            ...builtinBindings,
+            ...(userKeyboardOptions.bindings ?? {}),
+          },
+        },
+      },
     });
 
     registerEditor(this._quill.root, this);
@@ -64,6 +101,12 @@ export class QuoltEditor {
     this.insert = createInsertApi(this._quill);
     this.content = createContentApi(this._quill);
     this.selection = createSelectionApi(this._quill);
+    // Seed the shortcuts tracker with everything we just registered so list()
+    // and unbind() can see init-time bindings.
+    this.shortcuts = createShortcutsApi(this, this._quill, {
+      ...userShortcuts,
+      ...builtinShortcuts,
+    });
 
     const initial = options.initialContent;
     if (typeof initial === 'string') {
